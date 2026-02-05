@@ -63,7 +63,7 @@ interface SanctionCheckResponse {
 
 // --- Main App ---
 function App() {
-  const [activeTab, setActiveTab] = useState<'risk' | 'pricing' | 'collusion' | 'geo'>('risk');
+  const [activeTab, setActiveTab] = useState<'risk' | 'pricing' | 'collusion' | 'geo' | 'sanctions'>('risk');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -92,6 +92,12 @@ function App() {
   // 4. GEO & SANCTIONS STATE
   const [geoAddress, setGeoAddress] = useState('P.O. Box 4567, Nairobi');
   const [geoResult, setGeoResult] = useState<SiteVerifyResponse | null>(null);
+  
+  const [sanctionFormData, setSanctionFormData] = useState({
+    company_registration_number: 'PVT-998877',
+    entity_name: 'Soyo International Ltd',
+    directors: 'John Doe, Jane Smith'
+  });
   const [sanctionResult, setSanctionResult] = useState<SanctionCheckResponse | null>(null);
 
 
@@ -103,12 +109,19 @@ function App() {
     try {
       const res = await axios.post<PredictionResponse>(`${apiBaseURL}/predict`, riskFormData);
       setRiskResult(res.data);
-      // Auto-run sanctions check for demo
-      const sancRes = await axios.post<SanctionCheckResponse>(`${apiBaseURL}/screen-sanctions`, {
-        entity_name: "Soyo International", // Demo trigger
-        directors: ["John Doe"]
+    } catch (err) { setError('Connection Error'); console.error(err); }
+    finally { setLoading(false); }
+  };
+
+  const handleSanctionCheck = async () => {
+    setLoading(true); setError('');
+    try {
+      const res = await axios.post<SanctionCheckResponse>(`${apiBaseURL}/screen-sanctions`, {
+        company_registration_number: sanctionFormData.company_registration_number,
+        entity_name: sanctionFormData.entity_name,
+        directors: sanctionFormData.directors.split(',').map(d => d.trim())
       });
-      setSanctionResult(sancRes.data);
+      setSanctionResult(res.data);
     } catch (err) { setError('Connection Error'); console.error(err); }
     finally { setLoading(false); }
   };
@@ -218,10 +231,121 @@ function App() {
             <MapPin className="w-5 h-5" />
             Geospatial Site Audit
           </button>
+          <button
+            onClick={() => setActiveTab('sanctions')}
+            className={`py-4 px-2 font-medium flex items-center gap-2 border-b-2 transition-colors ${activeTab === 'sanctions' ? 'border-blue-500 text-blue-600' : 'border-transparent text-slate-500 hover:text-slate-800'} `}
+          >
+            <ShieldAlert className="w-5 h-5" />
+            Global Sanctions Shield
+          </button>
         </div>
       </div>
 
       <main className="max-w-7xl mx-auto p-6 mt-6">
+
+        {/* --- TAB 1: RISK AUDIT --- */}
+        {/* ... (Existing Tab 1 Content) ... */}
+
+        {/* --- TAB 5: SANCTIONS SCREENING --- */}
+        {activeTab === 'sanctions' && (
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            <section className="lg:col-span-4 h-fit space-y-6">
+              <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                <h2 className="text-lg font-bold mb-6 flex items-center gap-2 text-slate-800 border-b pb-4">
+                  <ShieldAlert className="w-5 h-5 text-red-600" />
+                  Sanction Screening Search
+                </h2>
+                <div className="space-y-4">
+                  <div>
+                    <label htmlFor="reg-number" className="block text-sm font-semibold text-slate-700 mb-1">Company Registration Number</label>
+                    <input id="reg-number" type="text"
+                      value={sanctionFormData.company_registration_number}
+                      onChange={(e) => setSanctionFormData({ ...sanctionFormData, company_registration_number: e.target.value })}
+                      placeholder="e.g. PVT-XXXXXX"
+                      className="w-full px-3 py-2.5 bg-slate-50 border border-slate-300 rounded-lg outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="ent-name" className="block text-sm font-semibold text-slate-700 mb-1">Entity Name</label>
+                    <input id="ent-name" type="text"
+                      value={sanctionFormData.entity_name}
+                      onChange={(e) => setSanctionFormData({ ...sanctionFormData, entity_name: e.target.value })}
+                      className="w-full px-3 py-2.5 bg-slate-50 border border-slate-300 rounded-lg outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="directors-list" className="block text-sm font-semibold text-slate-700 mb-1">Directors (Comma separated)</label>
+                    <textarea id="directors-list" rows={3}
+                      value={sanctionFormData.directors}
+                      onChange={(e) => setSanctionFormData({ ...sanctionFormData, directors: e.target.value })}
+                      className="w-full px-3 py-2.5 bg-slate-50 border border-slate-300 rounded-lg outline-none resize-none"
+                    />
+                  </div>
+                  <p className="text-xs text-slate-500">
+                    Real-time cross-referencing against OFAC, UN Security Council, and World Bank Debarred lists using global unique identifiers.
+                  </p>
+                  <button
+                    onClick={() => { void handleSanctionCheck() }}
+                    disabled={loading}
+                    className="w-full bg-slate-900 hover:bg-black text-white font-bold py-3 rounded-lg shadow-md transition-all mt-4"
+                  >
+                    {loading ? 'Screening Databases...' : 'Execute Sanction Check'}
+                  </button>
+                </div>
+              </div>
+            </section>
+
+            <section className="lg:col-span-8 space-y-6">
+              {sanctionResult ? (
+                <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-6">
+                  <div className={`p-8 rounded-xl border shadow-sm ${sanctionResult.is_sanctioned ? 'bg-red-50 border-red-200 text-red-900' : 'bg-emerald-50 border-emerald-200 text-emerald-900'} `}>
+                    <div className="flex items-start gap-6">
+                      <div className={`p-4 rounded-full bg-white shadow-sm ${sanctionResult.is_sanctioned ? 'text-red-600' : 'text-emerald-600'}`}>
+                        {sanctionResult.is_sanctioned ? <ShieldAlert className="w-12 h-12" /> : <CheckCircle className="w-12 h-12" />}
+                      </div>
+                      <div>
+                        <h2 className="text-2xl font-bold mb-2 flex items-center gap-2">
+                          {sanctionResult.is_sanctioned ? 'Entity IS Sanctioned' : 'Clearance: No Matches Found'}
+                        </h2>
+                        <p className="text-lg opacity-90 leading-relaxed">{sanctionResult.details}</p>
+                        {sanctionResult.source_list && (
+                          <div className="mt-4 inline-flex items-center gap-2 bg-red-600 text-white px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider">
+                            Source: {sanctionResult.source_list}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                    <h4 className="text-slate-800 font-bold mb-4 border-b pb-2">Technical Match Data</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                      <div className="p-4 bg-slate-50 rounded-lg border border-slate-100">
+                        <div className="text-xs font-bold text-slate-400 uppercase mb-1">Match Confidence</div>
+                        <div className="text-2xl font-bold">{Math.round(sanctionResult.match_confidence * 100)}%</div>
+                      </div>
+                      <div className="p-4 bg-slate-50 rounded-lg border border-slate-100">
+                        <div className="text-xs font-bold text-slate-400 uppercase mb-1">Status</div>
+                        <div className={`text-2xl font-bold ${sanctionResult.is_sanctioned ? 'text-red-600' : 'text-emerald-600'}`}>
+                          {sanctionResult.is_sanctioned ? 'REJECT' : 'PROCEED'}
+                        </div>
+                      </div>
+                      <div className="p-4 bg-slate-50 rounded-lg border border-slate-100">
+                        <div className="text-xs font-bold text-slate-400 uppercase mb-1">Timestamp</div>
+                        <div className="text-sm font-mono mt-2">{new Date().toISOString()}</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="h-full flex flex-col items-center justify-center bg-white rounded-xl border border-dashed border-slate-300 p-12 text-center text-slate-400">
+                  <ShieldAlert className="w-16 h-16 mb-4 opacity-20" />
+                  <p className="text-lg">Provide company registration details to begin screening.</p>
+                </div>
+              )}
+            </section>
+          </div>
+        )}
 
         {/* --- TAB 1: RISK AUDIT --- */}
         {activeTab === 'risk' && (
