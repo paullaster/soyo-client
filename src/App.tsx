@@ -73,7 +73,12 @@ function App() {
     credit_score: 600,
     company_size: 'Medium',
     supplier_age_at_award_days: 700,
-    category: 'Construction & Civil Works'
+    category: 'Construction & Civil Works',
+    history_sequence: [
+      [2, 5.0],  // Project 1: [delay, overrun]
+      [10, 12.0], // Project 2
+      [0, 0.0]   // Project 3
+    ]
   });
   const [riskResult, setRiskResult] = useState<PredictionResponse | null>(null);
 
@@ -402,6 +407,52 @@ function App() {
                       />
                     </div>
                   </div>
+
+                  {/* LSTM Time-Series Input Section */}
+                  <div className="pt-4 border-t border-slate-100">
+                    <label className="block text-xs font-bold text-blue-600 uppercase tracking-wider mb-3">
+                      Historical Trend Memory (LSTM Input)
+                    </label>
+                    <div className="space-y-3">
+                      {riskFormData.history_sequence.map((seq, idx) => (
+                        <div key={idx} className="flex items-center gap-2 bg-slate-50 p-2 rounded-lg border border-slate-200">
+                          <div className="text-[10px] font-bold text-slate-400 w-6">#{idx + 1}</div>
+                          <div className="flex-1">
+                            <input
+                              type="number"
+                              value={seq[0]}
+                              onChange={(e) => {
+                                const newSeq = [...riskFormData.history_sequence];
+                                newSeq[idx][0] = Number(e.target.value);
+                                setRiskFormData({ ...riskFormData, history_sequence: newSeq });
+                              }}
+                              placeholder="Delay"
+                              className="w-full text-xs p-1.5 border rounded bg-white outline-none"
+                            />
+                            <div className="text-[9px] text-slate-400 mt-0.5">Delay (Days)</div>
+                          </div>
+                          <div className="flex-1">
+                            <input
+                              type="number"
+                              value={seq[1]}
+                              onChange={(e) => {
+                                const newSeq = [...riskFormData.history_sequence];
+                                newSeq[idx][1] = Number(e.target.value);
+                                setRiskFormData({ ...riskFormData, history_sequence: newSeq });
+                              }}
+                              placeholder="Overrun"
+                              className="w-full text-xs p-1.5 border rounded bg-white outline-none"
+                            />
+                            <div className="text-[9px] text-slate-400 mt-0.5">Overrun (%)</div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    <p className="text-[10px] text-slate-400 mt-2 italic">
+                      *LSTM branch analyzes these sequences to detect performance decay or improvement trends.
+                    </p>
+                  </div>
+
                   <button
                     onClick={() => { void handleRiskPredict() }}
                     disabled={loading}
