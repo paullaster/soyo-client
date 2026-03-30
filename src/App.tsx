@@ -18,11 +18,10 @@ interface PastContract {
 interface Tender { 
   id: string; title: string; category: string; budget_kes: number; deadline_days: number; anticipated_closure_date: string;
 }
-interface Supplier { 
-  id: string; name: string; registration_number: string; credit_score: number; company_size: string; employee_count: number; age_days: number; 
+interface Supplier {
+  id: string; name: string; registration_number: string; credit_score: number; employee_count: number; age_days: number;
   directors: Director[]; past_contracts: PastContract[];
-}
-interface AnalysisResult { 
+}interface AnalysisResult { 
   tender_id: string; supplier_id: string; supplier_name: string; risk_level: string; risk_score_probability: number; predicted_delay_days: number; timestamp: string; 
   workload_status?: string; conflict_found?: boolean;
 }
@@ -96,21 +95,35 @@ function App() {
   useEffect(() => {
     const init = async () => {
       try {
-        const [tRes, sRes] = await Promise.all([
-          axios.get<Tender[]>(`${apiBaseURL}/tenders`),
-          axios.get<Supplier[]>(`${apiBaseURL}/suppliers`)
-        ]);
+        const tRes = await axios.get<Tender[]>(`${apiBaseURL}/tenders`);
         setTenders(tRes.data);
-        setSuppliers(sRes.data);
-        if (tRes.data.length) setSelectedTenderId(tRes.data[0].id);
-        if (sRes.data.length) setSelectedSupplierId(sRes.data[0].id);
+        if (tRes.data.length) {
+          const firstTenderId = tRes.data[0].id;
+          setSelectedTenderId(firstTenderId);
+          await fetchSuppliers(firstTenderId);
+        }
       } catch (err) { setError('Connection Failure.'); }
     };
     void init();
   }, []);
 
-  useEffect(() => { if (selectedTenderId) void fetchComparison(); }, [selectedTenderId]);
+  useEffect(() => { 
+    if (selectedTenderId) {
+      void fetchComparison();
+      void fetchSuppliers(selectedTenderId);
+    } 
+  }, [selectedTenderId]);
+
   useEffect(() => { setRiskResult(null); }, [selectedSupplierId, selectedTenderId]);
+
+  const fetchSuppliers = async (tenderId: string) => {
+    try {
+      const res = await axios.get<Supplier[]>(`${apiBaseURL}/suppliers?tender_id=${tenderId}`);
+      setSuppliers(res.data);
+      if (res.data.length) setSelectedSupplierId(res.data[0].id);
+      else setSelectedSupplierId('');
+    } catch (err) { console.error('Failed to fetch suppliers', err); }
+  };
 
   const fetchComparison = async () => {
     try {
@@ -125,7 +138,10 @@ function App() {
       const res = await axios.post<RiskAuditResponse>(`${apiBaseURL}/predict`, { tender_id: selectedTenderId, supplier_id: selectedSupplierId });
       setRiskResult(res.data);
       await fetchComparison();
-    } catch (err) { setError('Audit Failed.'); }
+    } catch (err: any) {
+      const detail = err.response?.data?.detail;
+      setError(detail || 'Audit Failed: Unexpected Error.');
+    }
     finally { setLoading(false); }
   };
 
@@ -148,6 +164,25 @@ function App() {
       </header>
 
       <main className="max-w-7xl mx-auto p-8 space-y-8">
+        
+        {/* --- ERROR BANNER --- */}
+        {error && (
+          <div className="bg-red-50 border-2 border-red-200 p-6 rounded-2xl flex items-center gap-4 animate-in fade-in slide-in-from-top-4 duration-300 shadow-lg">
+            <div className="bg-red-500 p-2 rounded-lg shrink-0">
+              <AlertTriangle className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <p className="text-[10px] font-black text-red-400 uppercase tracking-widest mb-1">System Error Detected</p>
+              <p className="text-red-900 font-bold text-sm leading-relaxed">{error}</p>
+            </div>
+            <button 
+              onClick={() => setError('')}
+              className="ml-auto text-red-400 hover:text-red-600 font-black uppercase text-[10px] tracking-widest border border-red-200 px-4 py-2 rounded-lg transition-colors"
+            >
+              Dismiss
+            </button>
+          </div>
+        )}
         
         {/* --- STEP 1: SELECTORS --- */}
         <section className="bg-white rounded-3xl p-10 shadow-2xl border border-slate-200 overflow-visible">
@@ -262,8 +297,10 @@ function App() {
                     </div>
                     <h2 className="text-4xl font-black mb-4 uppercase tracking-tighter italic">{riskResult.risk_level} RISK VERDICT</h2>
                     <p className="text-xl font-bold text-slate-700">
-                      Forecasted project delay:
-                      <span className="text-5xl font-black block mt-4 underline decoration-blue-200 decoration-8">{Math.ceil(riskResult.predicted_delay_days)} FULL DAYS</span>
+                      {riskResult.predicted_delay_days < 0 ? 'Projected to finish early:' : 'Forecasted project delay:'}
+                      <span className="text-5xl font-black block mt-4 underline decoration-blue-200 decoration-8">
+                        {Math.abs(Math.ceil(riskResult.predicted_delay_days))} {riskResult.predicted_delay_days < 0 ? 'DAYS AHEAD' : 'FULL DAYS'}
+                      </span>
                     </p>
                   </div>
 
