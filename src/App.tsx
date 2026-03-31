@@ -87,7 +87,7 @@ function App() {
   const [comparisonResults, setComparisonResults] = useState<AnalysisResult[]>([]);
   const [riskResult, setRiskResult] = useState<RiskAuditResponse | null>(null);
 
-  const apiBaseURL = "http://localhost:8000";
+  const apiBaseURL = import.meta.env.VITE_API_BASE_URL;
 
   useEffect(() => {
     const init = async () => {
