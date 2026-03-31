@@ -1,14 +1,11 @@
 import axios from 'axios';
 import {
-  AlertTriangle, Building, CheckCircle, Clock, DollarSign, Search, TrendingUp,
-  BarChart as BarChartIcon, Activity, Users, FileText, Share2, MapPin, Phone, Globe, ShieldAlert,
-  Layers, ChevronRight, LayoutDashboard, Target, Info, ArrowRight, BadgeCheck, Timer, Briefcase, Zap,
-  History, Scale, FileSearch, ShieldCheck, Sparkles, CreditCard, ListChecks, Fingerprint, ClipboardList,
-  ArrowDownCircle, UserCheck, BarChart3, Landmark, ShieldX, X, Check, SearchIcon, Calendar, ArrowDown, FileBarChart,
+  AlertTriangle, Building, CheckCircle, Search, Target, ArrowRight, Zap,
+  History, ShieldCheck, ListChecks, Fingerprint, ArrowDownCircle, Check, 
   ActivitySquare, UserX, Users2
 } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, Cell } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 
 // --- Types ---
 interface Director { name: string; national_id: string; }
