@@ -145,6 +145,16 @@ function App() {
   const activeTender = tenders.find(t => t.id === selectedTenderId);
   const activeSupplier = suppliers.find(s => s.id === selectedSupplierId);
 
+  const bestChoice = comparisonResults.length > 0 
+    ? [...comparisonResults].sort((a, b) => {
+        const riskOrder: Record<string, number> = { 'Low': 0, 'Medium': 1, 'High': 2 };
+        if (riskOrder[a.risk_level] !== riskOrder[b.risk_level]) {
+          return riskOrder[a.risk_level] - riskOrder[b.risk_level];
+        }
+        return a.predicted_delay_days - b.predicted_delay_days;
+      })[0]
+    : null;
+
   return (
     <div className="min-h-screen bg-[#F8FAFC] text-[#334155] font-sans pb-20">
       
@@ -380,7 +390,9 @@ function App() {
                     <h3 className="font-black text-blue-400 text-[10px] uppercase tracking-[0.5em]">Best Choice Based on History</h3>
                     <div className="bg-white/5 p-10 rounded-[3rem] border border-white/10 space-y-8">
                        <div className="w-24 h-24 bg-emerald-500 rounded-3xl flex items-center justify-center text-slate-900 font-black text-5xl mx-auto shadow-lg shadow-emerald-500/20">#1</div>
-                       <div className="text-3xl font-black uppercase italic leading-none truncate">Rift Valley Infrastructure</div>
+                       <div className="text-3xl font-black uppercase italic leading-none truncate">
+                         {bestChoice?.supplier_name || 'No Data'}
+                       </div>
                     </div>
                   </div>
                 </div>
